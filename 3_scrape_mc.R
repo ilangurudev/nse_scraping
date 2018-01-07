@@ -32,13 +32,20 @@ stock_ratio_html <-
          ratios_url = str_c("http://www.moneycontrol.com", ratios_url),
          ratios_html = map(ratios_url, read_html))
 
+# stock_ratio_cons_standalone <- 
 stock_ratio_html %>% 
-  mutate(ratios_url_consolidated = map(ratios_html, ~ html_nodes(.,".tabnsdn li+ li a") %>% html_attr("href")),
-         ratios_url_consolidated = if_else(is.na(ratios_url_consolidated), "", ratios_url_consolidated))
+  mutate(ratios_url = map2_chr(ratios_html, ratios_url, function(x, y){
+             ratio_href <- html_nodes(x, ".tabnsdn li+ li a") %>% html_attr("href")
+             if(length(ratio_href) == 0){
+               y
+             } else {
+               paste0("http://www.moneycontrol.com", ratio_href)
+             }
+            }),
+         ratios_html = map(ratios_url, read_html),
+         return_on_net_worth = map(ratios_html, ~ html_nodes(., "tr:nth-child(21) .det+ .det") %>% html_text())
+    ) %>% View
          
-stock_ratio_html %>% 
-  pull(ratios_html) %>%         
-  .[[1]] %>% html_nodes(".tabnsdn li+ li a") %>% 
-  html_attr("href") %>% 
-  ifelse(length(.), "", "a")
-  
+#return on net worth
+#yearly resuts > consolidated > Net Sales/Income from operations
+#yearly resuts> consolidated > Net P/L After M.I & Associates	
