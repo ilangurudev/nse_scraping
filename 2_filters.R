@@ -1,3 +1,5 @@
+pacman::p_load(tidyverse, rvest, lubridate)
+
 
 all_data <- read_csv("all_data.csv")
 
