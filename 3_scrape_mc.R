@@ -1,4 +1,4 @@
-pacman::p_load(rvest, tidyverse)
+pacman::p_load(rvest, tidyverse, rebus)
 shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv")
 
 # function to extract market cap from the stock  page
@@ -14,7 +14,7 @@ extract_market_cap <- function(htm){
 # has slice to test on first ten only. PLEASE REMOVE.  
 stock_htmls <- 
   shortlisted_stocks %>% 
-    ungroup() %>%  slice(1:10) %>% 
+    ungroup() %>%  sample_n(15) %>% 
     mutate(url = str_c("http://www.moneycontrol.com/stocks/cptmarket/compsearchnew.php?topsearch_type=1&search_str=",
                        isin),
            html = map(url, read_html))
@@ -103,12 +103,17 @@ collapse_format <- function(x){
   }
 }
 
+sepf <- function(x) paste0(x, c("I","II","III","IV","V"))
+
 all_metrics <- 
   all_metrics_unformatted %>% 
-    select(-contains("url"), -contains("html")) %>% 
-    mutate(return_on_net_worth = map_chr(return_on_net_worth, collapse_format),
-           net_si_operations = map_chr(net_si_operations, collapse_format),
-           net_pl = map_chr(net_pl, collapse_format))
+  select(-contains("url"), -contains("html")) %>% 
+  mutate(return_on_net_worth = map_chr(return_on_net_worth, collapse_format),
+         net_si_operations = map_chr(net_si_operations, collapse_format),
+         net_pl = map_chr(net_pl, collapse_format)) %>% 
+  separate(return_on_net_worth, into = sepf("ron"), sep = rebus::literal(" | "), fill = "left") %>%
+  separate(net_si_operations, into = sepf("si"), sep = rebus::literal(" | "), fill = "left") %>%
+  separate(net_pl, into = sepf("pl"), sep = rebus::literal(" | "), fill = "left")
 
 write_csv(all_metrics, "results/all_metrics.csv")  
 

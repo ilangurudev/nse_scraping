@@ -3,18 +3,9 @@ pacman::p_load(tidyverse, rvest, lubridate)
 
 all_data <- read_csv("all_data.csv")
 
-all_data <- 
-  all_data %>% 
-  filter(series == "EQ")
-
 current_month <- month(today())
 current_year <- year(today())
-current_quarter <- case_when(
-  between(current_month, 1, 3) ~ 1,
-  between(current_month, 4, 6) ~ 2,
-  between(current_month, 7, 9) ~ 1,
-  TRUE ~ 4
-)
+current_quarter <- quarter(today())
 
 # volume 200%
 
@@ -41,12 +32,7 @@ vol_200p_month <-
 # same filter as above repeated over quarter with volume criterion at 75 lakhs
 vol_200p_quarter <- 
   all_data %>% 
-  mutate(quarter = case_when(
-    between(month, 1, 3) ~ 1,
-    between(month, 4, 6) ~ 2,
-    between(month, 7, 9) ~ 1,
-    TRUE ~ 4
-  )) %>% 
+  mutate(quarter = quarter(date)) %>% 
   filter(if(current_quarter == 1){
     ((quarter == 1 & year == current_year) | (quarter == 4 & year == (current_year - 1)))
   } else {
@@ -81,7 +67,7 @@ shortlisted_isin <-
 
 shortlisted_stocks <- 
   all_data %>% 
-  select(symbol, isin) %>% distinct() %>% 
+  select(symbol, isin, exchange) %>% distinct() %>% 
   filter(isin %in% shortlisted_isin)
 
 # join the three tables to get shortlisted stocks
