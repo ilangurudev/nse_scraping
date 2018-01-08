@@ -14,4 +14,4 @@ shortlisted_stocks <-
     filter(!is.na(volume_ratio)) %>% 
     filter(volume_ratio > 2)
 
-write_csv(shortlisted_stocks, "shortlisted_stocks.csv")
+write_csv(shortlisted_stocks, "results/shortlisted_stocks.csv")

@@ -1,5 +1,5 @@
 pacman::p_load(rvest, tidyverse)
-shortlisted_stocks <- read_csv("shortlisted_stocks.csv")
+shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv")
 
 # function to extract market cap from the stock  page
 extract_market_cap <- function(htm){
@@ -110,5 +110,5 @@ all_metrics <-
            net_si_operations = map_chr(net_si_operations, collapse_format),
            net_pl = map_chr(net_pl, collapse_format))
 
-write_csv(all_metrics, "all_metrics.csv")  
+write_csv(all_metrics, "results/all_metrics.csv")  
 
