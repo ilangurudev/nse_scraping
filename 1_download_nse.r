@@ -15,7 +15,7 @@ download_nsedata_period <- function(startDate, endDate){
     
     #Generate URL
     
-    myURL = paste("https://www.nseindia.com/content/historical/EQUITIES/", as.character(myDate, "%Y"), "/", toupper(as.character(myDate, "%b")), "/", downloadfilename, ".zip", sep = "")
+    nse_url = paste("https://www.nseindia.com/content/historical/EQUITIES/", as.character(myDate, "%Y"), "/", toupper(as.character(myDate, "%b")), "/", downloadfilename, ".zip", sep = "")
     
     #retrieve Zipped file
     tryCatch({
@@ -23,7 +23,7 @@ download_nsedata_period <- function(startDate, endDate){
       
       #28-10-2014: Fix for '403 Forbidden'
       #download.file(myURL,zippedFile, quiet=TRUE, mode="wb",cacheOK=TRUE)
-      GET(myURL, user_agent("Mozilla/5.0"), write_disk(paste(downloadfilename,".zip",sep="")))
+      GET(nse_url, user_agent("Mozilla/5.0"), write_disk(paste(downloadfilename,".zip",sep="")))
       
       
       #Unzip file and save it in temp 
@@ -35,7 +35,7 @@ download_nsedata_period <- function(startDate, endDate){
       
       #Write the BHAVCOPY csv - datewise
       write_csv(temp,path=paste0("data/",filenameDate))
-      
+      message(myDate)
   
     }, error=function(err){
       #print(paste(myDate, "-No Record"))
