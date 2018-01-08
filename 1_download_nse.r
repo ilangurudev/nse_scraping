@@ -1,16 +1,8 @@
-#28-10-2014: Fix for '403 Forbidden'
-## Credit http://stackoverflow.com/questions/26086868/error-downloading-a-csv-in-zip-from-website-with-get-in-r
-
 # if pacman not already installed
 # install.packages("pacman")
-pacman::p_load(httr, tidyverse, janitor)
+pacman::p_load(httr, tidyverse, janitor, lubridate)
 
-
-if(!"all_data.csv" %in% list.files()){
-  # Define start and end dates, and convert them into date format
-  startDate = as.Date("2017-11-01", order="ymd")
-  endDate = as.Date(today(), order="ymd")
-  
+download_nsedata_period <- function(startDate, endDate){
   #work with date, month, year for which data has to be extracted
   myDate = startDate
   zippedFile <- tempfile() 
@@ -44,18 +36,7 @@ if(!"all_data.csv" %in% list.files()){
       #Write the BHAVCOPY csv - datewise
       write_csv(temp,path=paste0("data/",filenameDate))
       
-      # #Write the csv in Monthly file
-      # if (file.exists(monthfilename))
-      # {
-      # 	write.table(temp,file=monthfilename,sep=",", eol="\n", row.names = FALSE, col.names = FALSE, append=TRUE)
-      # }else
-      # {
-      # 	write.table(temp,file=monthfilename,sep=",", eol="\n", row.names = FALSE, col.names = TRUE, append=FALSE)
-      # }
-      
-      
-      #Print Progress
-      #print(paste (myDate, "-Done!", endDate-myDate, "left"))
+  
     }, error=function(err){
       #print(paste(myDate, "-No Record"))
     }
@@ -83,15 +64,33 @@ if(!"all_data.csv" %in% list.files()){
   
   write_csv(all_data, "all_data.csv")
   
+  
+}
+
+
+
+if(!"all_data.csv" %in% list.files()){
+  # Define start and end dates, and convert them into date format
+  
+  endDate <- as.Date(today(), order="ymd")
+  startDate <- endDate - years(2)
+  
+  download_nsedata_period(startDate, endDate)
+
 } else {
   
   #EOD updation
   all_data <- read_csv("all_data.csv")
   
-  if(max(all_data$date) < ymd(today())){
-    print("yes")
+  if(max(all_data$date) < today()){
+    
+    startDate = max(all_data$date) + 1
+    endDate = today()
+    
+    download_nsedata_period(startDate, endDate)
+    
   } else{
-    print("no")
+    message("Already up to date")
   }
   
 }
