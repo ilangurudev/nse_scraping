@@ -3,7 +3,7 @@ pacman::p_load(tidyverse, rvest, lubridate)
 
 all_data <- read_csv("all_data.csv")
 
-today_ratio <- 
+shortlisted_stocks <- 
   all_data %>% 
   filter(series == "EQ") %>% 
   filter(date > ymd(20171130)) %>% 
@@ -14,4 +14,4 @@ today_ratio <-
     filter(!is.na(volume_ratio)) %>% 
     filter(volume_ratio > 2)
 
-write_csv(today_ratio, "today_ratio.csv")
+write_csv(shortlisted_stocks, "shortlisted_stocks.csv")
