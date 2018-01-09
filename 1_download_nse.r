@@ -103,14 +103,14 @@ update_stocks <- function(exchange = c("nse", "bse")){
   } else {
     
     #EOD updation
-    all_data_exchange <- read_csv(paste0("all_data_", exchange, ".csv"))
+    all_data_exchange <- read_csv(paste0("data/all_data_", exchange, ".csv"))
     
     if(max(all_data_exchange$date) < today()){
       
       startDate = max(all_data_exchange$date) + 1
       endDate = today()
       
-      download_stock_data(startDate, endDate)
+      download_stock_data(startDate, endDate, exchange)
       
     } else{
       message("Already up to date")
