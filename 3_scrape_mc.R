@@ -11,10 +11,13 @@ extract_market_cap <- function(html){
 }
 
 make_landing_url <- function(param){
+  url <- 
   "http://www.moneycontrol.com/stocks/cptmarket/compsearchnew.php?topsearch_type=1&search_str=" %>% 
     str_c(param) %>% 
-    str_replace_all(" ", "") %>% 
-    url()
+    str_replace_all(" ", "")
+  # %>%
+    # url()
+  curl::curl(url, handle = curl::new_handle("useragent" = "Mozilla/5.0"))
 } 
 
 test_landing <- function(html) {
@@ -34,20 +37,25 @@ fetch_page_and_test <- function(str){
 
 get_sc_html <- function(symbol, isin){
   message(str_c(symbol, "-", isin))
-  for(i in seq(str_length(isin),3)){
+  for(i in seq(str_length(isin),4)){
     html <- fetch_page_and_test(str_sub(isin, 1, i))
     if(!is.na(html)){
+      message("downloaded")
       return(html)
     }
+    closeAllConnections()
   }
   
   for(i in seq(str_length(symbol),3)){
     html <- fetch_page_and_test(str_sub(symbol, 1, i))
     if(!is.na(html)){
+      message("downloaded")
       return(html)
     }
+    closeAllConnections()
   }
   
+  message("failed")
   NA
 }
 
@@ -55,7 +63,8 @@ get_sc_html <- function(symbol, isin){
 # has slice to test on first ten only. PLEASE REMOVE.  
 (stock_htmls <- 
   shortlisted_stocks %>% 
-  ungroup() %>% 
+  ungroup() %>% arrange(symbol) %>%
+    filter(isin %in% c("539527", "INE767A01016", "506003")) %>% 
   mutate(html = map2(symbol, isin, get_sc_html),
          market_cap = map_dbl(html, possibly(extract_market_cap, NA))))
 
@@ -175,5 +184,5 @@ all_metrics <-
          isin, 
          exchange)
 
-write_csv(all_metrics, "results/all_metrics.csv")  
+write_csv(all_metrics, str_c("results/all_metrics_", today(), ".csv"))  
 
