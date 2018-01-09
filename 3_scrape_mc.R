@@ -184,5 +184,5 @@ all_metrics <-
          isin, 
          exchange)
 
-write_csv(all_metrics, str_c("results/all_metrics_", today(), ".csv"))  
+write_csv(all_metrics, str_c("results/all_metrics_", today() %>% format("%Y%m%d"), ".csv"))  
 
