@@ -64,7 +64,6 @@ get_sc_html <- function(symbol, isin){
 (stock_htmls <- 
   shortlisted_stocks %>% 
   ungroup() %>% arrange(symbol) %>%
-    filter(isin %in% c("539527", "INE767A01016", "506003")) %>% 
   mutate(html = map2(symbol, isin, get_sc_html),
          market_cap = map_dbl(html, possibly(extract_market_cap, NA))))
 
