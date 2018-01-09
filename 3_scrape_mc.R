@@ -1,7 +1,7 @@
 pacman::p_load(rvest, tidyverse, rebus, lubridate)
-shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv")
+shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv") %>% sample_n(15)
 
-scrap_delay_secs <- 0
+scrap_delay_secs <- 1
 
 read_html_safe <- function(...){
   Sys.sleep(scrap_delay_secs)
@@ -38,7 +38,7 @@ test_landing <- function(html) {
 fetch_page_and_test <- function(str){
   str %>% 
     make_landing_url() %>% 
-    read_html() %>% 
+    read_html_safe() %>% 
     test_landing()
 } 
 
@@ -84,7 +84,7 @@ stock_ratio_html <-
            map_chr(html, 
                    possibly(get_ratios_url, NA)),
          ratios_url = str_c("http://www.moneycontrol.com", ratios_url),
-         ratios_html = map(ratios_url, possibly(read_html, NA)))
+         ratios_html = map(ratios_url, possibly(read_html_safe, NA)))
 
 # get consolidated ratios url and html and replace ratios url and html 
 # wherever consolidated is present. 
@@ -116,7 +116,7 @@ stock_ratio_html %>%
       NA 
     }
   }),
-  ratios_html = map(ratios_url, possibly(read_html, NA)),
+  ratios_html = map(ratios_url, possibly(read_html_safe, NA)),
   return_on_net_worth = map(ratios_html, possibly(extract_ratios_ron, NA)),
   isStandalone = !str_detect(ratios_url, "consolidated")) 
 
@@ -127,7 +127,7 @@ stock_financials <-
                                   str_replace(ratios_url, "ratios", "results/yearly"),
                                   str_replace(ratios_url, "consolidated-ratios", "results/consolidated-yearly")
                                   ),
-         financials_html = map(financials_url, possibly(read_html, NA)))
+         financials_html = map(financials_url, possibly(read_html_safe, NA)))
 
 
 # get the required metrics from the financial yearly pages
