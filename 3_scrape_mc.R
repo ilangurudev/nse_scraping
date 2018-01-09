@@ -1,5 +1,12 @@
-pacman::p_load(rvest, tidyverse, rebus)
+pacman::p_load(rvest, tidyverse, rebus, lubridate)
 shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv")
+
+scrap_delay_secs <- 0
+
+read_html_safe <- function(...){
+  Sys.sleep(scrap_delay_secs)
+  read_html(...)
+}
 
 # function to extract market cap from the stock  page
 extract_market_cap <- function(html){
@@ -55,7 +62,7 @@ get_sc_html <- function(symbol, isin){
     closeAllConnections()
   }
   
-  message("failed")
+  message("------failed------")
   NA
 }
 
