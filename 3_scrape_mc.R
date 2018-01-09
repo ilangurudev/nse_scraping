@@ -10,7 +10,12 @@ extract_market_cap <- function(html){
     as.double()
 }
 
-make_landing_url <- function(param) str_c("http://www.moneycontrol.com/stocks/cptmarket/compsearchnew.php?topsearch_type=1&search_str=",param)
+make_landing_url <- function(param){
+  "http://www.moneycontrol.com/stocks/cptmarket/compsearchnew.php?topsearch_type=1&search_str=" %>% 
+    str_c(param) %>% 
+    str_replace_all(" ", "") %>% 
+    url()
+} 
 
 test_landing <- function(html) {
   if(is.na(extract_market_cap(html))){
@@ -28,7 +33,7 @@ fetch_page_and_test <- function(str){
 } 
 
 get_sc_html <- function(symbol, isin){
-  
+  message(str_c(symbol, "-", isin))
   for(i in seq(str_length(isin),3)){
     html <- fetch_page_and_test(str_sub(isin, 1, i))
     if(!is.na(html)){
@@ -50,7 +55,7 @@ get_sc_html <- function(symbol, isin){
 # has slice to test on first ten only. PLEASE REMOVE.  
 (stock_htmls <- 
   shortlisted_stocks %>% 
-  ungroup() %>%  sample_n(25) %>% 
+  ungroup() %>% 
   mutate(html = map2(symbol, isin, get_sc_html),
          market_cap = map_dbl(html, possibly(extract_market_cap, NA))))
 
@@ -147,17 +152,28 @@ collapse_format <- function(x){
   }
 }
 
-sepf <- function(x) paste0(x, c("I","II","III","IV","V"))
+sepf <- function(x) paste0(x, c("5","4","3","2","1"))
 
 all_metrics <- 
   all_metrics_unformatted %>% 
   select(-contains("url"), -contains("html")) %>% 
   mutate(return_on_net_worth = map_chr(return_on_net_worth, collapse_format),
          net_si_operations = map_chr(net_si_operations, collapse_format),
-         net_pl = map_chr(net_pl, collapse_format)) %>% 
-  separate(return_on_net_worth, into = sepf("ron"), sep = rebus::literal(" | "), fill = "right") %>%
-  separate(net_si_operations, into = sepf("si"), sep = rebus::literal(" | "), fill = "right") %>%
-  separate(net_pl, into = sepf("pl"), sep = rebus::literal(" | "), fill = "right")
+         net_pl = map_chr(net_pl, collapse_format),
+         blank1 = "  ", blank2 = blank1) %>% 
+  separate(return_on_net_worth, into = sepf("RNW"), sep = rebus::literal(" | "), fill = "right") %>%
+  separate(net_si_operations, into = sepf("SR"), sep = rebus::literal(" | "), fill = "right") %>%
+  separate(net_pl, into = sepf("NP"), sep = rebus::literal(" | "), fill = "right") %>% 
+  select(symbol, 
+         market_cap, 
+         starts_with("RNW"), 
+         blank1,
+         starts_with("SR"), 
+         blank2,
+         starts_with("NP"),
+         isStandalone, 
+         isin, 
+         exchange)
 
 write_csv(all_metrics, "results/all_metrics.csv")  
 

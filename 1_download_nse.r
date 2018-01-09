@@ -87,7 +87,8 @@ download_stock_data <- function(startDate, endDate, exchange = c("nse", "bse")){
     select(symbol, isin, exchange, date, open, high, low, close, volume, year, month, day, ym)
   
   write_csv(all_data, paste0("data/all_data_",exchange, ".csv"))
-
+  
+  all_data
 }
 
 update_stocks <- function(exchange = c("nse", "bse")){
@@ -119,9 +120,12 @@ update_stocks <- function(exchange = c("nse", "bse")){
   } 
 }
 
-update_stocks("bse")
-update_stocks("nse")
+bse <- update_stocks("bse")
+nse <- update_stocks("nse")
 
-read_csv("data/all_data_nse.csv") %>% 
-  bind_rows(read_csv("data/all_data_bse.csv", col_types = cols(isin = "c"))) %>% 
-  write_csv("all_data.csv")
+ 
+bind_rows(nse, 
+          bse %>% mutate(isin = isin %>% as.character())) %>% 
+write_csv("all_data.csv")
+
+rm(list = ls())

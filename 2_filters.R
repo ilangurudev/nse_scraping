@@ -3,9 +3,15 @@ pacman::p_load(tidyverse, rvest, lubridate)
 
 all_data <- read_csv("all_data.csv")
 
-current_month <- month(today())
-current_year <- year(today())
-current_quarter <- quarter(today())
+filter_date <- today()
+
+all_data <- 
+  all_data %>% 
+  filter(date <= filter_date)
+
+current_month <- month(filter_date)
+current_year <- year(filter_date)
+current_quarter <- quarter(filter_date)
 
 # volume 200%
 
@@ -23,7 +29,7 @@ vol_200p_month <-
   summarise(month_val = sum(close * volume), 
             volume = sum(as.numeric(volume)), 
             last_close = last(close)) %>%
-  ungroup() %>% distinct() %>% group_by(symbol) %>% arrange(symbol, year, month) %>% 
+  ungroup() %>% distinct() %>% group_by(isin) %>% arrange(symbol, year, month) %>% 
   mutate(volume_ratio = month_val/lag(month_val), 
          close_ratio = last_close/lag(last_close))  %>% 
   filter(!is.na(volume_ratio)) %>% 
@@ -42,7 +48,7 @@ vol_200p_quarter <-
   summarise(quarter_val = sum(close * volume), 
             volume = sum(as.numeric(volume)), 
             last_close = last(close)) %>%
-  ungroup() %>% distinct() %>% group_by(symbol) %>% arrange(symbol, year, quarter) %>% 
+  ungroup() %>% distinct() %>% group_by(isin) %>% arrange(symbol, year, quarter) %>% 
   mutate(volume_ratio = quarter_val/lag(quarter_val), 
          close_ratio = last_close/lag(last_close))  %>% 
   filter(!is.na(volume_ratio)) %>% 
@@ -72,3 +78,5 @@ shortlisted_stocks <-
 
 # join the three tables to get shortlisted stocks
 write_csv(shortlisted_stocks, "results/shortlisted_stocks.csv")
+
+rm(list = ls())
