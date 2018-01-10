@@ -1,5 +1,6 @@
 pacman::p_load(rvest, tidyverse, rebus, lubridate)
 shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv") %>% sample_n(15)
+scrape_date <- min(shortlisted_stocks$date)
 
 scrap_delay_secs <- 1
 
@@ -188,7 +189,9 @@ all_metrics <-
          starts_with("NP"),
          isStandalone, 
          isin, 
-         exchange)
+         exchange,
+         date, 
+         filter)
 
-write_csv(all_metrics, str_c("results/all_metrics_", today() %>% format("%Y%m%d"), ".csv"))  
+write_csv(all_metrics, str_c("results/all_metrics_", scrape_date %>% format("%Y%m%d"), ".csv"))  
 
