@@ -1,8 +1,8 @@
 pacman::p_load(rvest, tidyverse, rebus, lubridate)
-shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv") %>% sample_n(15)
-scrape_date <- min(shortlisted_stocks$date)
+shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv")
+scrape_date <- max(shortlisted_stocks$date)
 
-scrap_delay_secs <- 1
+scrap_delay_secs <- 0
 
 read_html_safe <- function(...){
   Sys.sleep(scrap_delay_secs)

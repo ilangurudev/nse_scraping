@@ -112,7 +112,7 @@ all_quarter_data <-
 
 vol_200p_quarter <- 
   vol_200p_quarter %>% 
-    anti_join(all_quarter_data, id = "isin")
+    anti_join(all_quarter_data, by = "isin")
 
 all_month_data <-  
   map_df(candidate_metric_files("month"), read_csv) %>% 
@@ -120,15 +120,17 @@ all_month_data <-
 
 vol_200p_month <- 
   vol_200p_month %>% 
-  anti_join(all_month_data, id = "isin")
+  anti_join(all_month_data, by = "isin")
 
 year_high <- 
   year_high %>% 
-  anti_join(all_month_data, id = "isin")
+  anti_join(all_month_data, by = "isin")
 
 
 volume_p <- 
-  anti_join(vol_200p_month, vol_200p_quarter, by = "isin") %>% 
+  anti_join(vol_200p_month, 
+            vol_200p_quarter, 
+            by = "isin") %>% 
   bind_rows(vol_200p_quarter) 
 
 # stocks prioritised as quarter, month and year_high
@@ -136,22 +138,22 @@ shortlisted_stocks <-
   anti_join(year_high, volume_p, by = "isin") %>% 
   bind_rows(volume_p)
 
-(shortlisted_stocks <- 
-  bind_rows(vol_200p_month, 
-            vol_200p_quarter, 
+(shortlisted_stocks <-
+  bind_rows(vol_200p_month,
+            vol_200p_quarter,
             year_high) %>%
-  select(symbol, isin, exchange, filter) %>% 
+  select(symbol, isin, exchange, filter) %>%
   mutate(date = filter_date))
  
-shortlisted_isin <-
-  bind_rows(vol_200p_month, vol_200p_quarter, year_high) %>%
-    pull(isin) %>% unique()
-
-shortlisted_stocks <-
-  all_data %>%
-  select(symbol, isin, exchange) %>% distinct() %>%
-  filter(isin %in% shortlisted_isin) %>%
-  mutate(date = filter_date)
+# shortlisted_isin <-
+#   bind_rows(vol_200p_month, vol_200p_quarter, year_high) %>%
+#     pull(isin) %>% unique()
+# 
+# shortlisted_stocks <-
+#   all_data %>%
+#   select(symbol, isin, exchange) %>% distinct() %>%
+#   filter(isin %in% shortlisted_isin) %>%
+#   mutate(date = filter_date)
 
 # join the three tables to get shortlisted stocks
 write_csv(shortlisted_stocks, "results/shortlisted_stocks.csv")
