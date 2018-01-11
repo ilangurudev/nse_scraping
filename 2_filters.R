@@ -1,11 +1,12 @@
 pacman::p_load(tidyverse, rvest, lubridate, rebus)
 
+#replace today with the date in quotes as in ymd( "2018-01-10" )
+backtrack_date <- ymd(today())
+
 all_data <- read_csv("all_data.csv")
 
 #provision for date filter
 max_date <- max(all_data$date)
-#replace today with the date in quotes as in ymd( "2018-01-10" )
-backtrack_date <- ymd( today() )
 
 filter_date <- min(backtrack_date, today(), max_date)
 
@@ -76,7 +77,7 @@ current_quarter <- quarter(filter_date)
 
 ##exclude already checked stocks based on certain params
 
-
+  
 candidate_metric_files <- function(unit = c("quarter", "month")){
   
   filter_months <- if(unit == "month"){
@@ -88,20 +89,39 @@ candidate_metric_files <- function(unit = c("quarter", "month")){
   filter_months <- filter_months %>% str_pad(2, "left", "0")
   
   #candiate_metric_files
-  all_metric_files <- list.files(path = "results", pattern = "all_metrics_")
+  all_shortlisted_files <- list.files(path = "results", pattern = "shortlisted_stocks_")
   
-  all_metric_files %>% 
-  str_subset(START %R% 
-               "all_metrics_" %R% 
-               current_year %R% 
-               or1(filter_months) %R% 
-               DIGIT %R% 
-               DIGIT %R%
-               DOT %R%
-               "csv"%R%
-               END) %>% 
-  str_c("results/", .)
-
+  if(length(all_shortlisted_files) > 1){
+    
+    all_shortlisted_files <- 
+      all_shortlisted_files %>% 
+      str_subset(START %R% 
+                   "shortlisted_stocks_" %R% 
+                   current_year %R% 
+                   or1(filter_months) %R% 
+                   DIGIT %R% 
+                   DIGIT %R%
+                   DOT %R%
+                   "csv"%R%
+                   END)
+    
+    shortlisted_dates_chrs <- 
+      all_shortlisted_files %>% 
+      str_extract(one_or_more(DIGIT)) 
+    
+    shortlisted_dates <- shortlisted_dates_chrs[ymd(shortlisted_dates_chrs) < filter_date]
+    
+    if(length(shortlisted_dates) == 0){
+      "results/shortlisted_stocks_empty.csv"
+    } else {
+      shortlisted_dates %>% str_c("results/shortlisted_stocks_",.,".csv")
+    }
+    
+  } else {
+    "results/shortlisted_stocks_empty.csv"
+    # tibble(symbol = NA, isin = NA, exchange = NA, filter = NA, date = NA) %>%
+    #   write_csv("results/shortlisted_stocks_empty.csv")
+  }
 }
 
 #eliminate _prev_quarter_data
@@ -139,9 +159,8 @@ shortlisted_stocks <-
   bind_rows(volume_p)
 
 (shortlisted_stocks <-
-  bind_rows(vol_200p_month,
-            vol_200p_quarter,
-            year_high) %>%
+  shortlisted_stocks %>%
+  arrange(symbol) %>% 
   select(symbol, isin, exchange, filter) %>%
   mutate(date = filter_date))
  
@@ -156,6 +175,7 @@ shortlisted_stocks <-
 #   mutate(date = filter_date)
 
 # join the three tables to get shortlisted stocks
-write_csv(shortlisted_stocks, "results/shortlisted_stocks.csv")
+write_csv(shortlisted_stocks, 
+          str_c("results/shortlisted_stocks_", filter_date %>% format("%Y%m%d"), ".csv"))
 
 rm(list = ls())

@@ -1,8 +1,28 @@
 pacman::p_load(rvest, tidyverse, rebus, lubridate)
-shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv")
-scrape_date <- max(shortlisted_stocks$date)
 
+#replace today with the date in quotes as in ymd( "2018-01-10" )
+user_date <- ymd( today() )
+
+#scraping delay in seconds (~ delay between one request and another)
 scrap_delay_secs <- 0
+
+available_dates <- 
+  list.files(path = "results", pattern = "shortlisted_stocks_") %>% 
+  str_extract(one_or_more(DIGIT)) %>% 
+  ymd() %>% .[!is.na(.)]
+
+max_available_date <- available_dates %>% max()
+
+if(user_date %in% available_dates) {
+  scrape_date <- user_date
+} else{
+  message("Shortlisted comapnies list not available for given date. 
+          Using date closest to mentioned date as scrape date.")
+  scrape_date <- 
+    available_dates[abs(available_dates - user_date) == min(abs(available_dates - user_date))]
+}
+
+shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv")
 
 read_html_safe <- function(...){
   Sys.sleep(scrap_delay_secs)
@@ -193,5 +213,6 @@ all_metrics <-
          date, 
          filter)
 
-write_csv(all_metrics, str_c("results/all_metrics_", scrape_date %>% format("%Y%m%d"), ".csv"))  
+write_csv(all_metrics, 
+          str_c("results/all_metrics_", scrape_date %>% format("%Y%m%d"), ".csv"))  
 
