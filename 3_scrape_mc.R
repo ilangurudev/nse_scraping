@@ -18,11 +18,15 @@ if(user_date %in% available_dates) {
 } else{
   message("Shortlisted comapnies list not available for given date. 
           Using date closest to mentioned date as scrape date.")
+  
   scrape_date <- 
     available_dates[abs(available_dates - user_date) == min(abs(available_dates - user_date))]
+  
+  message(str_c("scrape date: ", scrape_date))
 }
 
-shortlisted_stocks <- read_csv("results/shortlisted_stocks.csv")
+shortlisted_stocks <- 
+  read_csv(str_c("results/shortlisted_stocks_", scrape_date %>% format("%Y%m%d"), ".csv"))
 
 read_html_safe <- function(...){
   Sys.sleep(scrap_delay_secs)
