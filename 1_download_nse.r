@@ -104,6 +104,7 @@ update_stocks <- function(exchange = c("nse", "bse")){
   } else {
     
     #EOD updation
+    message("updating daily stock data")
     all_data_exchange <- read_csv(paste0("data/all_data_", exchange, ".csv"))
     
     if(max(all_data_exchange$date) < today()){
@@ -129,3 +130,4 @@ bind_rows(nse,
 write_csv("all_data.csv")
 
 rm(list = ls())
+message("-----------------------Updation complete---------------------------")

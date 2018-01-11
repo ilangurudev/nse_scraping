@@ -10,6 +10,8 @@ max_date <- max(all_data$date)
 
 filter_date <- min(backtrack_date, today(), max_date)
 
+message(str_c("Filtering data as on ", filter_date))
+
 all_data <- 
   all_data %>% 
   filter(date <= filter_date)
@@ -183,4 +185,4 @@ write_csv(shortlisted_stocks,
           str_c("results/shortlisted_stocks_", filter_date %>% format("%Y%m%d"), ".csv"))
 
 rm(list = ls())
-
+message("-----------------------Filtering complete---------------------------")

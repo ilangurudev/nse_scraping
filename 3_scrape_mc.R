@@ -25,6 +25,12 @@ if(user_date %in% available_dates) {
   message(str_c("scrape date: ", scrape_date))
 }
 
+message(str_c("Scraping for stocks filtered as on ", 
+              scrape_date, 
+              " with a scraping delay of ",
+              scrap_delay_secs, 
+              " seconds"))
+
 shortlisted_stocks <- 
   read_csv(str_c("results/shortlisted_stocks_", scrape_date %>% format("%Y%m%d"), ".csv"))
 
@@ -99,9 +105,12 @@ get_sc_html <- function(symbol, isin){
   mutate(html = map2(symbol, isin, get_sc_html),
          market_cap = map_dbl(html, possibly(extract_market_cap, NA))))
 
+message("Downloaded market cap and fetched landing page...")
 
 # get the ratios url and html from the stock page
 get_ratios_url <- function(html) html_node(html, "td:nth-child(4) li:nth-child(9) a") %>% html_attr("href")
+
+message("Fetching the ratios standalone page...")
 
 stock_ratio_html <- 
   stock_htmls %>%  
@@ -110,6 +119,9 @@ stock_ratio_html <-
                    possibly(get_ratios_url, NA)),
          ratios_url = str_c("http://www.moneycontrol.com", ratios_url),
          ratios_html = map(ratios_url, possibly(read_html_safe, NA)))
+
+
+message("Fetching the ratios consolidated page...")
 
 # get consolidated ratios url and html and replace ratios url and html 
 # wherever consolidated is present. 
@@ -140,12 +152,16 @@ get_consolidated_ratios_url <- function(x, y){
   }
 }
 
+message("Extracting the ratios from the fetched pages...")
+
 stock_ratio_cons_standalone <- 
 stock_ratio_html %>% 
   mutate(ratios_url = map2_chr(ratios_html, ratios_url, possibly(get_consolidated_ratios_url, NA)),
   ratios_html = map(ratios_url, possibly(read_html_safe, NA)),
   return_on_net_worth = map(ratios_html, possibly(extract_ratios_ron, NA)),
   isStandalone = !str_detect(ratios_url, "consolidated")) 
+
+message("Fetching the yearly pages...")
 
 # go to the appropriate financials page (consolidated wherever applicable) by tweaking ratios url
 stock_financials <- 
@@ -156,6 +172,7 @@ stock_financials <-
                                   ),
          financials_html = map(financials_url, possibly(read_html_safe, NA)))
 
+message("Extracting the yearly measures from the fetched pages...")
 
 # get the required metrics from the financial yearly pages
 all_metrics_unformatted <- 
@@ -185,6 +202,8 @@ all_metrics_unformatted <-
         NA
       }
     }))
+
+message("Formatting the output...")
 
 collapse_format <- function(x){
   if(length(x) == 0){
@@ -222,3 +241,4 @@ all_metrics <-
 write_csv(all_metrics, 
           str_c("results/all_metrics_", scrape_date %>% format("%Y%m%d"), ".csv"))  
 
+message("-----------------------Data Scraping Complete---------------------------")
