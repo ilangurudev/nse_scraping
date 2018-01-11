@@ -158,6 +158,10 @@ shortlisted_stocks <-
   anti_join(year_high, volume_p, by = "isin") %>% 
   bind_rows(volume_p)
 
+shortlisted_stocks <- 
+  shortlisted_stocks %>% 
+  anti_join(map_df(candidate_metric_files("month"), read_csv), by = "isin") 
+
 (shortlisted_stocks <-
   shortlisted_stocks %>%
   arrange(symbol) %>% 
@@ -179,3 +183,4 @@ write_csv(shortlisted_stocks,
           str_c("results/shortlisted_stocks_", filter_date %>% format("%Y%m%d"), ".csv"))
 
 rm(list = ls())
+
