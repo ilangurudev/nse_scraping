@@ -124,23 +124,25 @@ extract_ratios_ron <- function(x){
 }
 
 
+get_consolidated_ratios_url <- function(x, y){
+  if(!is.na(y)){
+    ratio_href <- 
+      html_nodes(x, ".tabnsdn li+ li a") %>% 
+      html_attr("href") %>% 
+      str_replace_all(" ", "")
+    if(length(ratio_href) == 0){
+      y
+    } else {
+      paste0("http://www.moneycontrol.com", ratio_href)
+    }
+  } else {
+    NA 
+  }
+}
+
 stock_ratio_cons_standalone <- 
 stock_ratio_html %>% 
-  mutate(ratios_url = map2_chr(ratios_html, ratios_url, function(x, y){
-    if(!is.na(y)){
-      ratio_href <- 
-        html_nodes(x, ".tabnsdn li+ li a") %>% 
-        html_attr("href") %>% 
-        str_replace_all(" ", "")
-      if(length(ratio_href) == 0){
-        y
-      } else {
-        paste0("http://www.moneycontrol.com", ratio_href)
-      }
-    } else {
-      NA 
-    }
-  }),
+  mutate(ratios_url = map2_chr(ratios_html, ratios_url, possibly(get_consolidated_ratios_url, NA)),
   ratios_html = map(ratios_url, possibly(read_html_safe, NA)),
   return_on_net_worth = map(ratios_html, possibly(extract_ratios_ron, NA)),
   isStandalone = !str_detect(ratios_url, "consolidated")) 
