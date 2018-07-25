@@ -3,6 +3,7 @@ pacman::p_load(rvest, tidyverse, rebus, lubridate)
 #replace today with the date in quotes as in ymd( "2018-01-10" )
 user_date <- ymd( today() )
 
+
 #scraping delay in seconds (~ delay between one request and another)
 scrap_delay_secs <- 0
 
@@ -74,15 +75,16 @@ fetch_page_and_test <- function(str){
 } 
 
 get_sc_html <- function(symbol, isin){
+  # browser()
   message(str_c(symbol, "-", isin))
-  for(i in seq(str_length(isin),4)){
-    html <- fetch_page_and_test(str_sub(isin, 1, i))
-    if(!is.na(html)){
-      message("downloaded")
-      return(html)
-    }
-    closeAllConnections()
+  
+  html <- fetch_page_and_test(isin)
+  if(!is.na(html)){
+    message("downloaded")
+    return(html)
   }
+  closeAllConnections()
+  
   
   for(i in seq(str_length(symbol),3)){
     html <- fetch_page_and_test(str_sub(symbol, 1, i))
@@ -100,8 +102,9 @@ get_sc_html <- function(symbol, isin){
 # from the shortlisted stocks, use the search url and isin number to get the stock's url and read thpse pages. 
 # has slice to test on first ten only. PLEASE REMOVE.  
 (stock_htmls <- 
-  shortlisted_stocks %>% 
-  ungroup() %>% arrange(symbol) %>%
+  shortlisted_stocks  %>% 
+  arrange(symbol) %>%
+  # slice(1:5) %>% 
   mutate(html = map2(symbol, isin, get_sc_html),
          market_cap = map_dbl(html, possibly(extract_market_cap, NA))))
 
@@ -114,12 +117,13 @@ message("Fetching the ratios standalone page...")
 
 stock_ratio_html <- 
   stock_htmls %>%  
-  mutate(ratios_url = 
+  mutate(standalone_ratios_url = 
            map_chr(html, 
                    possibly(get_ratios_url, NA)),
-         ratios_url = str_c("http://www.moneycontrol.com", ratios_url),
-         ratios_html = map(ratios_url, possibly(read_html_safe, NA)))
+         standalone_ratios_url = str_c("http://www.moneycontrol.com", standalone_ratios_url),
+         standalone_ratios_html = map(standalone_ratios_url, possibly(read_html_safe, NA)))
 
+# stock_ratio_html <- stock_ratio_html %>% rename(standalone_ratios_url = ratios_url, standalone_ratios_html = ratios_html)
 
 message("Fetching the ratios consolidated page...")
 
@@ -143,7 +147,7 @@ get_consolidated_ratios_url <- function(x, y){
       html_attr("href") %>% 
       str_replace_all(" ", "")
     if(length(ratio_href) == 0){
-      y
+      NA
     } else {
       paste0("http://www.moneycontrol.com", ratio_href)
     }
@@ -155,53 +159,72 @@ get_consolidated_ratios_url <- function(x, y){
 message("Extracting the ratios from the fetched pages...")
 
 stock_ratio_cons_standalone <- 
-stock_ratio_html %>% 
-  mutate(ratios_url = map2_chr(ratios_html, ratios_url, possibly(get_consolidated_ratios_url, NA)),
-  ratios_html = map(ratios_url, possibly(read_html_safe, NA)),
-  return_on_net_worth = map(ratios_html, possibly(extract_ratios_ron, NA)),
-  isStandalone = !str_detect(ratios_url, "consolidated")) 
+  stock_ratio_html %>% 
+  mutate(consolidated_ratios_url = map2_chr(standalone_ratios_html, standalone_ratios_url, possibly(get_consolidated_ratios_url, NA)),
+         consolidated_ratios_html = map(consolidated_ratios_url, possibly(read_html_safe, NA)),
+         consolidated_return_on_net_worth = map(consolidated_ratios_html, possibly(extract_ratios_ron, NA)),
+         standalone_return_on_net_worth = map(standalone_ratios_html, possibly(extract_ratios_ron, NA))) 
 
 message("Fetching the yearly pages...")
 
 # go to the appropriate financials page (consolidated wherever applicable) by tweaking ratios url
 stock_financials <- 
   stock_ratio_cons_standalone %>% 
-  mutate(financials_url = if_else(isStandalone,
-                                  str_replace(ratios_url, "ratios", "results/yearly"),
-                                  str_replace(ratios_url, "consolidated-ratios", "results/consolidated-yearly")
-                                  ),
-         financials_html = map(financials_url, possibly(read_html_safe, NA)))
+  mutate(standalone_financials_url = str_replace(standalone_ratios_url, "ratios", "results/yearly"),
+         consolidated_financials_url = str_replace(consolidated_ratios_url, "consolidated-ratios", "results/consolidated-yearly"),
+         standalone_financials_html = map(standalone_financials_url, possibly(read_html_safe, NA)),
+         consolidated_financials_html = map(consolidated_financials_url, possibly(read_html_safe, NA)))
 
 message("Extracting the yearly measures from the fetched pages...")
+
+get_net_si_operations <- function(x){
+  if(!is.na(x)){
+    net_si_operation <- html_nodes(x, "tr:nth-child(5) .det+ .det") %>% html_text() 
+    if(length(net_si_operation) == 0){
+      NA
+    } else {
+      net_si_operation
+    }
+  } else {
+    NA
+  }
+}
+
+get_net_pl_standalone <- function(x){
+  if(!is.na(x)){
+    net <- html_nodes(x, "tr:nth-child(32) .det+ .det") %>% html_text() 
+    if(length(net) == 0){
+      NA
+    } else{
+      net
+    }
+  } else {
+    NA
+  }
+}
+
+get_net_pl_consolidated <- function(x){
+  if(!is.na(x)){
+    net <- html_nodes(x, "tr:nth-child(35) .det+ .det") %>% html_text() 
+    if(length(net) == 0){
+      NA
+    } else{
+      net
+    }
+  } else {
+    NA
+  }
+}
+
 
 # get the required metrics from the financial yearly pages
 all_metrics_unformatted <- 
   stock_financials %>% 
   mutate(
-    net_si_operations = map(financials_html, function(x){
-      if(!is.na(x)){
-        net_si_operation <- html_nodes(x, "tr:nth-child(5) .det+ .det") %>% html_text() 
-        if(length(net_si_operation) == 0){
-          NA
-        } else {
-          net_si_operation
-        }
-      } else {
-        NA
-      }
-    }),
-    net_pl = map2(financials_html, isStandalone, function(x, y){
-      if(!is.na(x)){
-        net <- html_nodes(x, ifelse(y, "tr:nth-child(32) .det+ .det", "tr:nth-child(35) .det+ .det")) %>% html_text() 
-        if(length(net) == 0){
-          NA
-        } else{
-          net
-        }
-      } else {
-        NA
-      }
-    }))
+    standalone_net_si_operations = map(standalone_financials_html, get_net_si_operations),
+    consolidated_net_si_operations = map(consolidated_financials_html, get_net_si_operations),
+    standalone_net_pl = map(standalone_financials_html, get_net_pl_standalone),
+    consolidated_net_pl = map(consolidated_financials_html, get_net_pl_consolidated))
 
 message("Formatting the output...")
 
@@ -218,25 +241,41 @@ sepf <- function(x) paste0(x, c("5","4","3","2","1"))
 all_metrics <- 
   all_metrics_unformatted %>% 
   select(-contains("url"), -contains("html")) %>% 
-  mutate(return_on_net_worth = map_chr(return_on_net_worth, collapse_format),
-         net_si_operations = map_chr(net_si_operations, collapse_format),
-         net_pl = map_chr(net_pl, collapse_format),
-         blank1 = "  ", blank2 = blank1) %>% 
-  separate(return_on_net_worth, into = sepf("RNW"), sep = rebus::literal(" | "), fill = "right") %>%
-  separate(net_si_operations, into = sepf("SR"), sep = rebus::literal(" | "), fill = "right") %>%
-  separate(net_pl, into = sepf("NP"), sep = rebus::literal(" | "), fill = "right") %>% 
+  mutate(standalone_return_on_net_worth = map_chr(standalone_return_on_net_worth, collapse_format),
+         consolidated_return_on_net_worth = map_chr(consolidated_return_on_net_worth, collapse_format),
+         standalone_net_si_operations = map_chr(standalone_net_si_operations, collapse_format),
+         standalone_net_pl = map_chr(standalone_net_pl, collapse_format),
+         consolidated_net_si_operations = map_chr(consolidated_net_si_operations, collapse_format),
+         consolidated_net_pl = map_chr(consolidated_net_pl, collapse_format),
+         blank1 = "  ", 
+         blank2 = blank1,
+         blank3 = blank1,
+         blank4 = blank1,
+         blank5 = blank1,
+         blank6 = blank1) %>% 
+  separate(consolidated_return_on_net_worth, into = sepf("consolidated_RNW"), sep = rebus::literal(" | "), fill = "right") %>%
+  separate(consolidated_net_si_operations, into = sepf("consolidated_SR"), sep = rebus::literal(" | "), fill = "right") %>%
+  separate(consolidated_net_pl, into = sepf("consolidated_NP"), sep = rebus::literal(" | "), fill = "right") %>%
+  separate(standalone_return_on_net_worth, into = sepf("standalone_RNW"), sep = rebus::literal(" | "), fill = "right") %>%
+  separate(standalone_net_si_operations, into = sepf("standalone_SR"), sep = rebus::literal(" | "), fill = "right") %>%
+  separate(standalone_net_pl, into = sepf("standalone_NP"), sep = rebus::literal(" | "), fill = "right") %>%
   select(symbol, 
+         isin,
+         filter,
          market_cap, 
-         starts_with("RNW"), 
+         contains("consolidated_RNW"),
          blank1,
-         starts_with("SR"), 
+         contains("consolidated_SR"), 
          blank2,
-         starts_with("NP"),
-         isStandalone, 
-         isin, 
-         exchange,
-         date, 
-         filter)
+         contains("consolidated_NP"),
+         blank3,
+         contains("standalone_RNW"),
+         blank4,
+         contains("standalone_SR"), 
+         blank5,
+         contains("standalone_NP"),
+         blank6,
+         date)
 
 write_csv(all_metrics, 
           str_c("results/all_metrics_", scrape_date %>% format("%Y%m%d"), ".csv"))  

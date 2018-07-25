@@ -2,6 +2,7 @@ pacman::p_load(tidyverse, rvest, lubridate, rebus)
 
 #replace today with the date in quotes as in ymd( "2018-01-10" )
 backtrack_date <- ymd(today())
+# backtrack_date <- ymd(20180420)
 
 all_data <- read_csv("all_data.csv")
 
@@ -129,7 +130,7 @@ candidate_metric_files <- function(unit = c("quarter", "month")){
 #eliminate _prev_quarter_data
   
 all_quarter_data <- 
- map_df(candidate_metric_files("quarter"), read_csv) %>% 
+ map_df(candidate_metric_files("quarter"), read_csv, col_types = cols(.default = "c")) %>% 
  filter(filter == "vol200p_quarter")  
 
 vol_200p_quarter <- 
@@ -137,7 +138,7 @@ vol_200p_quarter <-
     anti_join(all_quarter_data, by = "isin")
 
 all_month_data <-  
-  map_df(candidate_metric_files("month"), read_csv) %>% 
+  map_df(candidate_metric_files("month"), read_csv, col_types = cols(.default = "c")) %>% 
   filter(filter != "vol200p_quarter")  
 
 vol_200p_month <- 
@@ -162,7 +163,7 @@ shortlisted_stocks <-
 
 shortlisted_stocks <- 
   shortlisted_stocks %>% 
-  anti_join(map_df(candidate_metric_files("month"), read_csv), by = "isin") 
+  anti_join(map_df(candidate_metric_files("month"), read_csv, col_types = cols(.default = "c")), by = "isin") 
 
 (shortlisted_stocks <-
   shortlisted_stocks %>%
